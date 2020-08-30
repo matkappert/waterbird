@@ -14,7 +14,6 @@
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-
 #include <SerialUI.h>
 #include "serialMenu.h"
 
