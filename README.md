@@ -1,6 +1,6 @@
 # Waterbird 🦩
 
-Water irrigation controller using weather data from Node-Red to Arduino based microcontrollers with MQTT
+Water irrigation controller using weather data from Node-Red to Arduino based microcontrollers over MQTT
 
 
 
