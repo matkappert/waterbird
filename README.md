@@ -47,6 +47,11 @@ Install MQTT broker Mosquitto, again in the terminal type:
 sudo apt install -y mosquitto mosquitto-clients
 ~~~
 
+start or stop mosquitto service
+~~~bash
+sudo /etc/init.d/mosquitto start
+sudo /etc/init.d/mosquitto stop
+~~~
 
 find you Pi IP Address
 ~~~bash

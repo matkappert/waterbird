@@ -3,6 +3,7 @@
 #ifdef useProjectLibrarys
 #include "src/pubsubclient-2.8/src/PubSubClient.h"
 #include "src/advancedSerial/src/advancedSerial.h"
+// #include "src/SerialUI-3.2.2/src/SerialUI.h"
 #else
 #include <PubSubClient.h>
 #include <advancedSerial.h>
@@ -14,7 +15,8 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 
-
+#include <SerialUI.h>
+#include "serialMenu.h"
 
 /*********************************************************************
   // 		User Configurations.
@@ -23,8 +25,8 @@ PubSubClient client(espClient);
 //
 //	wifi settings
 //
-#define wifi_ssid      "LittleHouse"
-#define Wifi_password  "appletree"
+#define coded_wifi_ssid      ""
+#define coded_wifi_password  ""
 
 //
 //	mqtt server ip address
@@ -113,8 +115,15 @@ void setup() {
   aSerial.pln("\n\r\r\n\r");
 #ifdef print_logo
   aSerial.pln("                _            _     _         _").pln(" __      ____ _| |_ ___ _ __| |__ (_)_ __ __| |").pln(" \\ \\ /\\ / / _` | __/ _ \\ '__| '_ \\| | '__/ _` |").pln("  \\ V  V / (_| | ||  __/ |  | |_) | | | | (_| |").p("   \\_/\\_/ \\__,_|\\__\\___|_|  |_.__/|_|_|  \\__,_| ").pln(sketch_version);
-  aSerial.pln("    __").pln("  .^o ~\\").pln(" Y /'~) }      _____").pln(" l/  / /    ,-~     ~~--.,_").pln("    ( (    /  ~-._         ^.").pln("     \\ \"--'--.    \"-._       \\").pln("      \"-.________     ~--.,__ ^.").pln("                \\\"~r-.,___.-'-. ^.").pln("                 YI    \\\\      ~-.\\").pln("                 ||     \\\\        `\\").pln("                 ||     //").pln("                 ||    //").pln("                 ()   //").pln("                 ||  //").pln("                 || ( c").pln("    ___._ __  ___I|__`--__._ __  _").pln("  \"~     ~  \"~   ::  ~~\"    ~  ~~");
+  aSerial.pln("    __").pln("  .^o ~\\").pln(" Y /'~) }      _____").pln(" l/  / /    ,-~     ~~--.,_").pln("    ( (    /  ~-._         ^.").pln("     \\ \"--'--.    \"-._       \\").pln("      \"-.________     ~--.,__ ^.").pln("                \\\"~r-.,___.-'-. ^.").pln("                 YI    \\\\      ~-.\\").pln("                 ||     \\\\        `\\").pln("                 ||     //").pln("                 ||    //").pln("                 ()   //").pln("                 ||  //").pln("                 || ( c").pln("    ___._ __  ___I|__`--__._ __  _");
 #endif
+  
+  delay(500);
+  if (!SetupSerialUI()) {
+    aSerial.pln("Problem during setup");
+  }else{
+  	aSerial.pln("\n\n---------------------------------").pln("Enter '?' for available menu options").pln("---------------------------------");
+  }
   delay(2000);
 
 
@@ -138,11 +147,12 @@ void setup() {
   /***********************
     // WiFi Setup.
   ************************/
-  aSerial.vv().p("Connecting to '").p(wifi_ssid).pln("'");
+  aSerial.vv().p("Connecting to '").p(coded_wifi_ssid).pln("'");
   WiFi.mode(WIFI_STA);
-  WiFi.begin(wifi_ssid, Wifi_password);
+  WiFi.begin(coded_wifi_ssid, coded_wifi_password);
   // Loop until we're connected
   while (WiFi.status() != WL_CONNECTED) {
+  	SerialMenuLoop();
     delay(500);
     aSerial.vvvv().p(".");
   }
@@ -170,6 +180,7 @@ void loop() {
     reconnect();
   }
   client.loop();
+  SerialMenuLoop();
 
 
   /***********************
@@ -212,6 +223,7 @@ void loop() {
     client.publish("waterbird/status/msg", msg);
   }
 #endif
+
 } /* END LOOP */
 
 
@@ -253,6 +265,7 @@ void reconnect() {
 #ifdef LED_BUILTIN
     statusLedSlowBlink();
 #endif
+    SerialMenuLoop();
     aSerial.vv().pln("\nAttempting MQTT connection...");
 
     // Create a random client ID
