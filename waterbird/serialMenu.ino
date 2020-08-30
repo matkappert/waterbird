@@ -2,12 +2,12 @@ SUI::SerialUI MySUI(1);
 MyInputsContainerSt MyInputs;
 
 
-void SerialMenuLoop(){
-	if (MySUI.checkForUser()) {
-	  while (MySUI.userPresent()) {
-	    MySUI.handleRequests();
-	  }
-	} 
+void SerialMenuLoop() {
+  if (MySUI.checkForUser()) {
+    // while (MySUI.userPresent()) {
+    MySUI.handleRequests();
+    // }
+  }
 }
 
 bool SetupSerialUI() {
@@ -30,18 +30,38 @@ bool SetupSerialUI() {
     MySUI.returnError(CouldntAddItemErr);
     return false;
   }
+
+  if ( ! topMenu->addRequest( MyInputs.toggle_channel)) {
+    MySUI.returnError(CouldntAddItemErr);
+    return false;
+  }
+
+
   return true;
 }
 
 
 void ssidChangedCallback() {
-  // MySUI.print(F("WiFi SSID changed to:"));
-  // MySUI.println(MyInputs.wifi_ssid);
-	aSerial.pln().p("WiFi SSID changed to: \"").p(MyInputs.wifi_ssid).pln("\"");
+  aSerial.p("WiFi SSID changed to: \"").p(MyInputs.wifi_ssid).pln("\"");
 }
 
-void passwordChangedCallback(){
-	MySUI.print(F("WiFi password changed to:"));
-	MySUI.println(MyInputs.wifi_password);
+void passwordChangedCallback() {
+  aSerial.p("WiFi password changed to: \"").p(MyInputs.wifi_ssid).pln("\"");
 }
 
+
+void toggleChangedCallback() {
+  uint8_t x = MyInputs.toggle_channel - 1;
+  if (x <= number_of_outputs - 1 && x >= 0) {
+    outputs[x].state = !outputs[x].state;
+    if (outputs[x].state) {
+      digitalWrite(outputs[x].pin, HIGH ^ output_pin_invert);
+      outputs[x].timer = millis() + maximum_output_time;
+    } else {
+      digitalWrite(outputs[x].pin, LOW ^ output_pin_invert);
+      outputs[x].timer = -1;
+    }
+    aSerial.p("Toggled ch:").p(x + 1).p(" - state changed to ").pln(outputs[x].state ? "'ON'" : "'OFF'");
+  }
+
+}

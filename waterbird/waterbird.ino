@@ -15,7 +15,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 #include <SerialUI.h>
-#include "serialMenu.h"
+
 
 /*********************************************************************
   // 		User Configurations.
@@ -86,7 +86,7 @@ char msg[MSG_BUFFER_SIZE];
 uint16_t value = 0;
 #endif
 
-
+#include "serialMenu.h"
 
 
 void setup() {
@@ -116,12 +116,12 @@ void setup() {
   aSerial.pln("                _            _     _         _").pln(" __      ____ _| |_ ___ _ __| |__ (_)_ __ __| |").pln(" \\ \\ /\\ / / _` | __/ _ \\ '__| '_ \\| | '__/ _` |").pln("  \\ V  V / (_| | ||  __/ |  | |_) | | | | (_| |").p("   \\_/\\_/ \\__,_|\\__\\___|_|  |_.__/|_|_|  \\__,_| ").pln(sketch_version);
   aSerial.pln("    __").pln("  .^o ~\\").pln(" Y /'~) }      _____").pln(" l/  / /    ,-~     ~~--.,_").pln("    ( (    /  ~-._         ^.").pln("     \\ \"--'--.    \"-._       \\").pln("      \"-.________     ~--.,__ ^.").pln("                \\\"~r-.,___.-'-. ^.").pln("                 YI    \\\\      ~-.\\").pln("                 ||     \\\\        `\\").pln("                 ||     //").pln("                 ||    //").pln("                 ()   //").pln("                 ||  //").pln("                 || ( c").pln("    ___._ __  ___I|__`--__._ __  _");
 #endif
-  
+
   delay(500);
   if (!SetupSerialUI()) {
     aSerial.pln("Problem during setup");
-  }else{
-  	aSerial.pln("\n\n---------------------------------").pln("Enter '?' for available menu options").pln("---------------------------------");
+  } else {
+    aSerial.pln("\n\n-------------------------------------").pln("Enter '?' for available menu options").pln("-------------------------------------");
   }
   delay(2000);
 
@@ -151,7 +151,7 @@ void setup() {
   WiFi.begin(coded_wifi_ssid, coded_wifi_password);
   // Loop until we're connected
   while (WiFi.status() != WL_CONNECTED) {
-  	SerialMenuLoop();
+    SerialMenuLoop();
     delay(500);
     aSerial.vvvv().p(".");
   }
