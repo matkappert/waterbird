@@ -187,7 +187,8 @@ void loop() {
   ************************/
   for (uint8_t x = 0; x < number_of_outputs; x++) {
     if ( outputs[x].timer < millis()  ) {
-      digitalWrite(outputs[x].pin, LOW ^ output_pin_invert);
+      outputs[x].state = false;
+      digitalWrite(outputs[x].pin, false ^ output_pin_invert);
       aSerial.v().p("ERROR: ch:").p(x + 1).pln(" - timeout.");
       outputs[x].timer = -1;
     }
