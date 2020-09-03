@@ -1,20 +1,33 @@
-#define sketch_version "v1.0"
+/**
+ * @file    waterbird.h
+ * @author  matkappert
+ * @version V0.1.0
+ * @date    03/09/20
+*/
+
+
 #define useProjectLibrarys
+
 #ifdef useProjectLibrarys
-#include "src/pubsubclient-2.8/src/PubSubClient.h"
-#include "src/advancedSerial/src/advancedSerial.h"
-// #include "src/SerialUI-3.2.2/src/SerialUI.h"
+  #include "src/pubsubclient-2.8/src/PubSubClient.h"
+  #include "src/console/src/console.h"
 #else
-#include <PubSubClient.h>
-#include <advancedSerial.h>
+  #include <PubSubClient.h>
+  #include <console.h>
 #endif
 
-#include <ESP8266WiFi.h>
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+#ifdef ESP8266
+  #include <ESP8266WiFi.h>
+  WiFiClient espClient;
+  PubSubClient client(espClient);
+#endif
 
-#include <SerialUI.h>
+
+
+char* wifi_ssid;
+char* wifi_pwd;
+
 
 
 /*********************************************************************
@@ -86,7 +99,20 @@ char msg[MSG_BUFFER_SIZE];
 uint16_t value = 0;
 #endif
 
-#include "serialMenu.h"
+_version version = {0,1,0};
+
+void reboot(const char *arg);
+
+uint8_t menu_length = 1;
+cmd_t commands[] = {
+  {"r", "reboot", reboot, "Reboot system"}
+};
+
+
+void reboot(const char *arg) {
+  // console.v().p("void trigger(").p(arg).pln(")");
+  ESP.restart();
+}
 
 
 void setup() {
@@ -108,35 +134,30 @@ void setup() {
     // Arduino Setup.
   ************************/
   Serial.begin(115200);
-  aSerial.setPrinter(Serial);
-  aSerial.setFilter(Level::vvvv); // The filtering threshold is set to Level::vv
+  console.version = version;
+  console.setPrinter(Serial);
+  console.setFilter(Level::vvvv); // The filtering threshold is set to Level::vv
   delay(1000);
-  aSerial.pln("\n\r\r\n\r");
+  console.pln("\n\r\r\n\r");
 #ifdef print_logo
-  aSerial.pln("                _            _     _         _").pln(" __      ____ _| |_ ___ _ __| |__ (_)_ __ __| |").pln(" \\ \\ /\\ / / _` | __/ _ \\ '__| '_ \\| | '__/ _` |").pln("  \\ V  V / (_| | ||  __/ |  | |_) | | | | (_| |").p("   \\_/\\_/ \\__,_|\\__\\___|_|  |_.__/|_|_|  \\__,_| ").pln(sketch_version);
-  aSerial.pln("    __").pln("  .^o ~\\").pln(" Y /'~) }      _____").pln(" l/  / /    ,-~     ~~--.,_").pln("    ( (    /  ~-._         ^.").pln("     \\ \"--'--.    \"-._       \\").pln("      \"-.________     ~--.,__ ^.").pln("                \\\"~r-.,___.-'-. ^.").pln("                 YI    \\\\      ~-.\\").pln("                 ||     \\\\        `\\").pln("                 ||     //").pln("                 ||    //").pln("                 ()   //").pln("                 ||  //").pln("                 || ( c").pln("    ___._ __  ___I|__`--__._ __  _");
+  console.pln("                _            _     _         _").pln(" __      ____ _| |_ ___ _ __| |__ (_)_ __ __| |").pln(" \\ \\ /\\ / / _` | __/ _ \\ '__| '_ \\| | '__/ _` |").pln("  \\ V  V / (_| | ||  __/ |  | |_) | | | | (_| |").p("   \\_/\\_/ \\__,_|\\__\\___|_|  |_.__/|_|_|  \\__,_| ").pln();
+  console.pln("      __").pln("    .^o ~\\").pln("   Y /'~) }      _____").pln("   l/  / /    ,-~     ~~--.,_").pln("      ( (    /  ~-._         ^.").pln("       \\ \"--'--.    \"-._       \\").pln("        \"-.________     ~--.,__ ^.").pln("                  \\\"~r-.,___.-'-. ^.").pln("                   YI    \\\\      ~-.\\").pln("                   ||     \\\\        `\\").pln("                   ||     //").pln("                   ||    //").pln("                   ()   //").pln("                   ||  //").pln("                   || ( c").pln("      ___._ __  ___I|__`--__._ __  _");
 #endif
-
-  delay(500);
-  if (!SetupSerialUI()) {
-    aSerial.pln("Problem during setup");
-  } else {
-    aSerial.pln("\n\n-------------------------------------").pln("Enter '?' for available menu options").pln("-------------------------------------");
-  }
+  console.begin(commands, menu_length);
   delay(2000);
 
 
   /***********************
     // Channel Setup.
   ************************/
-  aSerial.vv().p("Number of outputs: ").p(number_of_outputs).pln(".");
+  console.vv().p("Number of outputs: ").p(number_of_outputs).pln(".");
   for (uint8_t x = 0; x < number_of_outputs; x++) {
     outputs[x].pin = output_pins[x];
     outputs[x].timer = -1;
     outputs[x].state = false;
     pinMode(outputs[x].pin, OUTPUT);
     digitalWrite(outputs[x].pin, LOW ^ output_pin_invert);
-    aSerial.vvvv().p("Ch:").p(x).p(" GPIO - ").p(outputs[x].pin).pln(".");
+    console.vvvv().p("Ch:").p(x).p(" GPIO - ").p(outputs[x].pin).pln(".");
   }
 
 
@@ -146,17 +167,17 @@ void setup() {
   /***********************
     // WiFi Setup.
   ************************/
-  aSerial.vv().p("Connecting to '").p(coded_wifi_ssid).pln("'");
+  console.vv().p("Connecting to '").p(coded_wifi_ssid).pln("'");
   WiFi.mode(WIFI_STA);
   WiFi.begin(coded_wifi_ssid, coded_wifi_password);
   // Loop until we're connected
   while (WiFi.status() != WL_CONNECTED) {
-    SerialMenuLoop();
+    console.update();
     delay(500);
-    aSerial.vvvv().p(".");
+    console.vvvv().p(".");
   }
-  aSerial.vvvv().pln();
-  aSerial.vv().pln("\nWiFi connected").p("IP address: ").pln(WiFi.localIP());
+  console.vvvv().pln();
+  console.vv().pln("\nWiFi connected").p("IP address: ").pln(WiFi.localIP());
 #ifdef LED_BUILTIN
   statusLedSlowBlink();
 #endif
@@ -179,7 +200,7 @@ void loop() {
     reconnect();
   }
   client.loop();
-  SerialMenuLoop();
+  console.update();
 
 
   /***********************
@@ -189,7 +210,7 @@ void loop() {
     if ( outputs[x].timer < millis()  ) {
       outputs[x].state = false;
       digitalWrite(outputs[x].pin, false ^ output_pin_invert);
-      aSerial.v().p("ERROR: ch:").p(x + 1).pln(" - timeout.");
+      console.v().p("ERROR: ch:").p(x + 1).pln(" - timeout.");
       outputs[x].timer = -1;
     }
   }
@@ -216,7 +237,7 @@ void loop() {
   if (now - lastMsg > 2000) {
     lastMsg = now;
     ++value;
-    aSerial.vv().p("Message arrived [").p(topic).p("] ");
+    console.vv().p("Message arrived [").p(topic).p("] ");
     snprintf (msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
     Serial.print("Publish message: ");
     Serial.println(msg);
@@ -236,7 +257,7 @@ void mqttCallback(char* topic, byte* payload, uint8_t length) {
 
     for (uint8_t x = 0; x < number_of_outputs; x++) {
       if ( String(topic).startsWith("waterbird/set/ch" + String(x + 1))  ) {
-        aSerial.v().p("ch:").p(x + 1).p(" - state changed to ").pln(state ? "'ON'" : "'OFF'");
+        console.v().p("ch:").p(x + 1).p(" - state changed to ").pln(state ? "'ON'" : "'OFF'");
         outputs[x].state = state;
         if (state) {
           digitalWrite(outputs[x].pin, HIGH ^ output_pin_invert);
@@ -250,7 +271,7 @@ void mqttCallback(char* topic, byte* payload, uint8_t length) {
 
     }
     if (isError) {
-      aSerial.v().p("ERROR: unknown MQTT request - \"").p(topic).pln("\"");
+      console.v().p("ERROR: unknown MQTT request - \"").p(topic).pln("\"");
     }
 
   }
@@ -265,8 +286,8 @@ void reconnect() {
 #ifdef LED_BUILTIN
     statusLedSlowBlink();
 #endif
-    SerialMenuLoop();
-    aSerial.vv().pln("\nAttempting MQTT connection...");
+    console.update();
+    console.vv().pln("\nAttempting MQTT connection...");
 
     // Create a random client ID
     String clientId = "WaterbirdClient-";
@@ -276,14 +297,14 @@ void reconnect() {
 #ifdef LED_BUILTIN
       statusLedStop();
 #endif
-      aSerial.vv().pln("MQTT connected\n");
+      console.vv().pln("MQTT connected\n");
 
       client.publish("waterbird/status/msg", "Waterbird Startup");
       // ... and resubscribe
       client.subscribe("waterbird/set/#");
 
     } else {
-      aSerial.vv().p("MQTT failed, rc=").pln(client.state());
+      console.vv().p("MQTT failed, rc=").pln(client.state());
       delay(5000);
     }
   }
