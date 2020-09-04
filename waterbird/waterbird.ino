@@ -1,20 +1,24 @@
 /**
  * @file    waterbird.h
  * @author  matkappert
- * @version V0.1.0
- * @date    03/09/20
+ * @repo    github.com/matkappert/waterbird
+ * @version V0.1.1
+ * @date    04/09/20
+ * @format  http://format.krzaq.cc (style: google)
 */
 
 
 #define useProjectLibrarys
 
 #ifdef useProjectLibrarys
-  #include "src/pubsubclient-2.8/src/PubSubClient.h"
-  #include "src/console/src/console.h"
+  #include "src/pubsubclient-2.8/src/PubSubClient.h" 
+  #include "src/console/src/console.h" 
 #else
-  #include <PubSubClient.h>
-  #include <console.h>
+  #include <PubSubClient.h> // https://github.com/knolleary/pubsubclient
+  #include <console.h> // https://github.com/matkappert/waterbird
 #endif
+
+_version version = {0,1,1};
 
 
 #ifdef ESP8266
@@ -23,27 +27,19 @@
   PubSubClient client(espClient);
 #endif
 
-
-
-char* wifi_ssid;
-char* wifi_pwd;
-
+#include "menu.h"
+#include <EEPROM.h>
 
 
 /*********************************************************************
   // 		User Configurations.
 **********************************************************************/
 
-//
-//	wifi settings
-//
-#define coded_wifi_ssid      ""
-#define coded_wifi_password  ""
 
 //
 //	mqtt server ip address
 //
-#define mqtt_server    "10.0.0.2"
+// #define mqtt_server    "10.0.0.2"
 
 //
 //	this is an array of the output pin
@@ -63,10 +59,6 @@ const uint8_t output_pins[] = {
 //
 #define output_pin_invert false // true|false
 
-//
-//	uncomment the line below to send debug messages to node-red ever 2seconds
-//
-// #define printHelloWorld
 
 /*********************************************************************
   // 		End User Configurations.
@@ -90,29 +82,10 @@ bool is_outputs_active;
 #ifdef ESP8266
 #include <Ticker.h>
 Ticker flasher;
+bool flashing = false;
 #endif
 
-#ifdef printHelloWorld
-unsigned long lastMsg = 0;
-#define MSG_BUFFER_SIZE	(50)
-char msg[MSG_BUFFER_SIZE];
-uint16_t value = 0;
-#endif
 
-_version version = {0,1,0};
-
-void reboot(const char *arg);
-
-uint8_t menu_length = 1;
-cmd_t commands[] = {
-  {"r", "reboot", reboot, "Reboot system"}
-};
-
-
-void reboot(const char *arg) {
-  // console.v().p("void trigger(").p(arg).pln(")");
-  ESP.restart();
-}
 
 
 void setup() {
@@ -140,11 +113,11 @@ void setup() {
   delay(1000);
   console.pln("\n\r\r\n\r");
 #ifdef print_logo
-  console.pln("                _            _     _         _").pln(" __      ____ _| |_ ___ _ __| |__ (_)_ __ __| |").pln(" \\ \\ /\\ / / _` | __/ _ \\ '__| '_ \\| | '__/ _` |").pln("  \\ V  V / (_| | ||  __/ |  | |_) | | | | (_| |").p("   \\_/\\_/ \\__,_|\\__\\___|_|  |_.__/|_|_|  \\__,_| ").pln();
-  console.pln("      __").pln("    .^o ~\\").pln("   Y /'~) }      _____").pln("   l/  / /    ,-~     ~~--.,_").pln("      ( (    /  ~-._         ^.").pln("       \\ \"--'--.    \"-._       \\").pln("        \"-.________     ~--.,__ ^.").pln("                  \\\"~r-.,___.-'-. ^.").pln("                   YI    \\\\      ~-.\\").pln("                   ||     \\\\        `\\").pln("                   ||     //").pln("                   ||    //").pln("                   ()   //").pln("                   ||  //").pln("                   || ( c").pln("      ___._ __  ___I|__`--__._ __  _");
+  console.vv().pln("                _            _     _         _").pln(" __      ____ _| |_ ___ _ __| |__ (_)_ __ __| |").pln(" \\ \\ /\\ / / _` | __/ _ \\ '__| '_ \\| | '__/ _` |").pln("  \\ V  V / (_| | ||  __/ |  | |_) | | | | (_| |").p("   \\_/\\_/ \\__,_|\\__\\___|_|  |_.__/|_|_|  \\__,_| ").pln();
+  console.vv().pln("      __").pln("    .^o ~\\").pln("   Y /'~) }      _____").pln("   l/  / /    ,-~     ~~--.,_").pln("      ( (    /  ~-._         ^.").pln("       \\ \"--'--.    \"-._       \\").pln("        \"-.________     ~--.,__ ^.").pln("                  \\\"~r-.,___.-'-. ^.").pln("                   YI    \\\\      ~-.\\").pln("                   ||     \\\\        `\\").pln("                   ||     //").pln("                   ||    //").pln("                   ()   //").pln("                   ||  //").pln("                   || ( c").pln("      ___._ __  ___I|__`--__._ __  _");
 #endif
-  console.begin(commands, menu_length);
-  delay(2000);
+  menuInit();
+  delay(1000);
 
 
   /***********************
@@ -157,7 +130,7 @@ void setup() {
     outputs[x].state = false;
     pinMode(outputs[x].pin, OUTPUT);
     digitalWrite(outputs[x].pin, LOW ^ output_pin_invert);
-    console.vvvv().p("Ch:").p(x).p(" GPIO - ").p(outputs[x].pin).pln(".");
+    console.vvv().p("Ch:").p(x).p(" GPIO - ").p(outputs[x].pin).pln(".");
   }
 
 
@@ -167,27 +140,19 @@ void setup() {
   /***********************
     // WiFi Setup.
   ************************/
-  console.vv().p("Connecting to '").p(coded_wifi_ssid).pln("'");
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(coded_wifi_ssid, coded_wifi_password);
-  // Loop until we're connected
-  while (WiFi.status() != WL_CONNECTED) {
-    console.update();
-    delay(500);
-    console.vvvv().p(".");
-  }
-  console.vvvv().pln();
-  console.vv().pln("\nWiFi connected").p("IP address: ").pln(WiFi.localIP());
-#ifdef LED_BUILTIN
-  statusLedSlowBlink();
-#endif
+  wifiConnection();
 
 
   /***********************
     // MQTT Setup.
   ************************/
   randomSeed(micros());
-  client.setServer(mqtt_server, 1883);
+  if (!mqtt_params) {
+    console.v().pln("\n#WARNING! No MQTT server IP settings.");
+    client.setServer("127.0.0.0", 1883);
+  } else {
+    client.setServer((char *)mqtt_ip_address.buffer, 1883);
+  }
   client.setCallback(mqttCallback);
 
 
@@ -196,8 +161,11 @@ void setup() {
 
 
 void loop() {
+  if(WiFi.status() != WL_CONNECTED){
+    wifiConnection();
+  }
   if (!client.connected()) {
-    reconnect();
+    mqttConnection();
   }
   client.loop();
   console.update();
@@ -210,7 +178,7 @@ void loop() {
     if ( outputs[x].timer < millis()  ) {
       outputs[x].state = false;
       digitalWrite(outputs[x].pin, false ^ output_pin_invert);
-      console.v().p("ERROR: ch:").p(x + 1).pln(" - timeout.");
+      console.v().p("\n#ERROR: ch:").p(x + 1).pln(" - timeout.");
       outputs[x].timer = -1;
     }
   }
@@ -229,21 +197,7 @@ void loop() {
 #endif
 
 
-  /***********************
-    // Send debug messages.
-  ************************/
-#ifdef printHelloWorld
-  unsigned long now = millis();
-  if (now - lastMsg > 2000) {
-    lastMsg = now;
-    ++value;
-    console.vv().p("Message arrived [").p(topic).p("] ");
-    snprintf (msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish("waterbird/status/msg", msg);
-  }
-#endif
+
 
 } /* END LOOP */
 
@@ -257,7 +211,7 @@ void mqttCallback(char* topic, byte* payload, uint8_t length) {
 
     for (uint8_t x = 0; x < number_of_outputs; x++) {
       if ( String(topic).startsWith("waterbird/set/ch" + String(x + 1))  ) {
-        console.v().p("ch:").p(x + 1).p(" - state changed to ").pln(state ? "'ON'" : "'OFF'");
+        console.vv().p("ch:").p(x + 1).p(" - state changed to ").pln(state ? "'ON'" : "'OFF'");
         outputs[x].state = state;
         if (state) {
           digitalWrite(outputs[x].pin, HIGH ^ output_pin_invert);
@@ -271,7 +225,7 @@ void mqttCallback(char* topic, byte* payload, uint8_t length) {
 
     }
     if (isError) {
-      console.v().p("ERROR: unknown MQTT request - \"").p(topic).pln("\"");
+      console.vv().p("\n#ERROR: unknown MQTT request - \"").p(topic).pln("\"");
     }
 
   }
@@ -279,44 +233,79 @@ void mqttCallback(char* topic, byte* payload, uint8_t length) {
 }
 
 
-
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-#ifdef LED_BUILTIN
-    statusLedSlowBlink();
-#endif
-    console.update();
-    console.vv().pln("\nAttempting MQTT connection...");
-
-    // Create a random client ID
-    String clientId = "WaterbirdClient-";
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str())) {
-#ifdef LED_BUILTIN
-      statusLedStop();
-#endif
-      console.vv().pln("MQTT connected\n");
-
-      client.publish("waterbird/status/msg", "Waterbird Startup");
-      // ... and resubscribe
-      client.subscribe("waterbird/set/#");
-
+void wifiConnection(){
+  if (!wifi_params) {
+      console.v().pln("\n#SYSTEM HALTED! No WiFi settings.");
+      while (true) {
+        console.update();
+      }
     } else {
-      console.vv().p("MQTT failed, rc=").pln(client.state());
-      delay(5000);
+      console.vv().p("Connecting to '").p((char *)wifi_ssid.buffer).pln("'");
+      WiFi.mode(WIFI_STA);
+      WiFi.begin((char *)wifi_ssid.buffer, (char *)wifi_password.buffer);
+      // Loop until we're connected
+      while (WiFi.status() != WL_CONNECTED) {
+        console.update();
+        delay(250);
+        console.vvvv().p(".");
+      }
+      console.vvvv().pln();
+      console.vv().p("\nWiFi connected\tIP address: ").pln(WiFi.localIP());
+    #ifdef LED_BUILTIN
+      statusLedStop();
+      statusLedSlowBlink();
+    #endif
+  }
+}
+
+
+void mqttConnection() {
+  // Loop until we're reconnected
+  if (mqtt_params) {
+    while (!client.connected()) {
+  #ifdef LED_BUILTIN
+      statusLedSlowBlink();
+  #endif
+      console.update();
+      console.vv().pln("Attempting MQTT connection...");
+
+      // Create a random client ID
+      String clientId = "WaterbirdClient-";
+      clientId += String(random(0xffff), HEX);
+      // Attempt to connect
+      if (client.connect(clientId.c_str())) {
+  #ifdef LED_BUILTIN
+        statusLedStop();
+  #endif
+        console.vv().pln("MQTT connected.");
+
+        client.publish("waterbird/status/msg", "Waterbird Startup");
+        // ... and resubscribe
+        client.subscribe("waterbird/set/#");
+
+      } else {
+        console.vv().p("\n#ERROR! MQTT connection failed, rc=").pln(client.state());
+        delay(5000);
+      }
     }
+  }else{
+    #ifdef LED_BUILTIN
+        statusLedSlowBlink();
+    #endif
   }
 }
 
 #ifdef LED_BUILTIN
 void statusLedSlowBlink() {
+  if(!flashing)
   flasher.attach(0.5, statusLedFlip);
+  flashing = true;
 }
 
 void statusLedFastBlink() {
+  if(!flashing)
   flasher.attach(0.05, statusLedFlip);
+  flashing = true;
 }
 
 void statusLedFlip() {
@@ -325,6 +314,7 @@ void statusLedFlip() {
 }
 
 void statusLedStop() {
+  flashing = false;
   flasher.detach();
   digitalWrite(LED_BUILTIN, true);
 }
