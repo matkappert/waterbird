@@ -2,7 +2,7 @@
  * @file    waterbird.h
  * @author  matkappert
  * @repo    github.com/matkappert/waterbird
- * @version V0.1.1
+ * @version V0.1.2
  * @date    04/09/20
  * @format  http://format.krzaq.cc (style: google)
 */
@@ -17,7 +17,7 @@
 #include <console.h>       // https://github.com/matkappert/waterbird
 #endif
 
-_version version = {0, 1, 1};
+_version version = {0, 1, 2};
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
@@ -238,6 +238,11 @@ void mqttCallback(char *topic, byte *payload, uint8_t length) {
     if (isError) {
       console.vv().p("\n#ERROR: unknown MQTT request - \"").p(topic).pln("\"");
     }
+  }else if (strcmp("waterbird/pingreq", topic) == 0) {
+    static char str[12];
+    sprintf(str, "%u", millis());
+    // console.vvvv().p("MQTT ping response - ").pln(str);
+    client.publish("waterbird/pingresp", str);
   }
 }
 
@@ -290,9 +295,10 @@ void mqttConnection() {
 #endif
         console.vv().pln("MQTT connected.");
 
-        client.publish("waterbird/status/msg", "Waterbird Startup");
         // ... and resubscribe
         client.subscribe("waterbird/set/#");
+        client.subscribe("waterbird/pingreq");
+        client.publish("waterbird/pingresp", "reset");
 
       } else {
         console.vv()
