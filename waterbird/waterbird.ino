@@ -35,12 +35,12 @@ PubSubClient client(espClient);
 //
 //  this is an array of the output pin
 //
-const uint8_t output_pins[] = {D1, D2};
+#define  output_pins (const uint8_t[]) {D1, D2}
 
 //
 //  set the maximum active time in minutes in case of any errors
 //
-#define maximum_output_time 60000ul * 10  // 10 minutes
+#define maximum_output_time 10  // 10 minutes
 
 //
 //  invert output pins?
@@ -203,7 +203,7 @@ void changeOuputState(uint8_t channel, bool state) {
   outputs[channel].state = state;
   if (state) {
     digitalWrite(outputs[channel].pin, HIGH ^ output_pin_invert);
-    outputs[channel].timer = millis() + maximum_output_time;
+    outputs[channel].timer = millis() + (60000ul * maximum_output_time);
   } else {
     digitalWrite(outputs[channel].pin, LOW ^ output_pin_invert);
     outputs[channel].timer = -1;
