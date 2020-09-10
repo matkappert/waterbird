@@ -7,23 +7,6 @@
         "info": ""
     },
     {
-        "id": "cde7d19a.fc31f8",
-        "type": "mqtt in",
-        "z": "20e19740.7ac5c",
-        "name": "",
-        "topic": "waterbird/status/msg",
-        "qos": "2",
-        "datatype": "auto",
-        "broker": "59504833.dbd63",
-        "x": 220,
-        "y": 480,
-        "wires": [
-            [
-                "75b97a51.449e94"
-            ]
-        ]
-    },
-    {
         "id": "7ea42969.fefc28",
         "type": "mqtt out",
         "z": "20e19740.7ac5c",
@@ -34,21 +17,6 @@
         "broker": "59504833.dbd63",
         "x": 420,
         "y": 540,
-        "wires": []
-    },
-    {
-        "id": "75b97a51.449e94",
-        "type": "debug",
-        "z": "20e19740.7ac5c",
-        "name": "",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "targetType": "full",
-        "x": 400,
-        "y": 480,
         "wires": []
     },
     {
@@ -156,12 +124,12 @@
         "ontime": "sunriseEnd",
         "ontopic": "",
         "onpayload": "on",
-        "onoffset": "60",
+        "onoffset": "",
         "onrandomoffset": 0,
         "offtime": "sunriseEnd",
         "offtopic": "",
         "offpayload": "off",
-        "offoffset": "70",
+        "offoffset": "60",
         "offrandomoffset": false,
         "mon": true,
         "tue": true,
@@ -186,7 +154,7 @@
         "method": "GET",
         "ret": "obj",
         "paytoqs": false,
-        "url": "http://api.openweathermap.org/data/2.5/onecall?units=metric&lat=-33.49&lon=151.33&APPID=49055e521ab283006bdaa2c70fd64113",
+        "url": "http://api.openweathermap.org/data/2.5/onecall?units=metric&lat=-33.49&lon=151.33&APPID=",
         "tls": "",
         "persist": false,
         "proxy": "",
@@ -227,7 +195,7 @@
         "crontab": "",
         "once": false,
         "onceDelay": 0.1,
-        "x": 620,
+        "x": 580,
         "y": 160,
         "wires": [
             [
@@ -240,7 +208,7 @@
         "type": "function",
         "z": "20e19740.7ac5c",
         "name": "onecall api",
-        "func": "var daily = [];\nvar update = false;\nvar retries = global.get(\"open_weather_retries\") || 0;\n\nif (msg.statusCode && msg.statusCode === 200 && msg.payload.daily) {\n  global.set(\"open_weather_retries\", 0);\n  if (msg.payload.daily) {\n    msg.payload.daily.forEach((day, i) => {\n      daily[i] = {\n        rain: day.rain || 0,\n        wind: day.wind_speed || 0,\n        max_temp: day.temp.max || 0,\n      };\n    });\n    update = true;\n  }\n\n  node.send([null, { payload: daily }], null);\n\n  if (daily[0].rain >= 10.0) {\n    // Turn off irrigation when it rains over 10 mm.\n    node.send([{ payload: \"off\" }, null, null]);\n  } else if (daily[0].rain >= 5.0) {\n    // Decrease irrigation by 50% when it rains over 5 mm\n    node.send([{ payload: \"reduced\" }, null, null]);\n  } else if (daily[0].wind_speed >= 50.0) {\n    // Delay irrigation if wind speeds over 50 km/hr are forecast.\n    node.send([{ payload: \"delay\" }, null, null]);\n  } else if (daily[0].max_temp >= 35.0) {\n    // Increase irrigation by 20% if forecast temperature is over 35 degrees.\n    node.send([{ payload: \"increase\" }, null, null]);\n  } else {\n    node.send([{ payload: \"normal\" }, null, null]);\n  }\n\n  if (update || msg.payload.update == \"status\") {\n    node.status({\n      fill: \"blue\",\n      shape: \"ring\",\n      text: `${daily[0].rain}mm, ${daily[0].wind}km/h, ${daily[0].max_temp}℃`,\n    });\n    setTimeout(() => {\n      node.status({\n        fill: \"grey\",\n        shape: \"dot\",\n        text: `${daily[0].rain}mm, ${daily[0].wind}km/h, ${daily[0].max_temp}℃`,\n      });\n    }, 1500);\n  }\n} else {\n  if (retries <= 3) {\n      retries = retries+1;\n     global.set(\"open_weather_retries\", retries)\n    node.warn(`Openweather API ERROR, retry in ${retries}min`);\n    \n    setTimeout(() => {\n      node.send([null, null, { payload: \"retry\" }]);\n    }, 60000 * retries);\n  } else {\n    node.warn(`Openweather API FAILED, triggering outputs`);\n    node.send([{ payload: \"normal\" }, null, null]);\n    global.set(\"open_weather_retries\", 0);\n  }\n}",
+        "func": "var daily = [];\nvar update = false;\nvar retries = global.get(\"open_weather_retries\") || 0;\n\nif (msg.statusCode && msg.statusCode === 200 && msg.payload.daily) {\n  global.set(\"open_weather_retries\", 0);\n  if (msg.payload.daily) {\n    msg.payload.daily.forEach((day, i) => {\n      daily[i] = {\n        rain: day.rain || 0,\n        wind: day.wind_speed || 0,\n        max_temp: day.temp.max || 0,\n      };\n    });\n    update = true;\n  }\n\n  node.send([null, { payload: daily }], null);\n\n  if (daily[0].rain >= 10.0) {\n    // Turn off irrigation when it rains over 10 mm.\n    node.send([{ payload: \"off\", weather: daily[0] }, null, null]);\n  } else if (daily[0].rain >= 5.0) {\n    // Decrease irrigation by 50% when it rains over 5 mm\n    node.send([{ payload: \"reduced\", weather: daily[0] }, null, null]);\n  } else if (daily[0].wind_speed >= 50.0) {\n    // Delay irrigation if wind speeds over 50 km/hr are forecast.\n    node.send([{ payload: \"delay\", weather: daily[0] }, null, null]);\n  } else if (daily[0].max_temp >= 35.0) {\n    // Increase irrigation by 20% if forecast temperature is over 35 degrees.\n    node.send([{ payload: \"increase\", weather: daily[0] }, null, null]);\n  } else {\n    node.send([{ payload: \"normal\", weather: daily[0] }, null, null]);\n  }\n\n  if (update || msg.payload.update == \"status\") {\n    node.status({\n      fill: \"blue\",\n      shape: \"ring\",\n      text: `${daily[0].rain}mm, ${daily[0].wind}km/h, ${daily[0].max_temp}℃`,\n    });\n    setTimeout(() => {\n      node.status({\n        fill: \"grey\",\n        shape: \"dot\",\n        text: `${daily[0].rain}mm, ${daily[0].wind}km/h, ${daily[0].max_temp}℃`,\n      });\n    }, 1500);\n  }\n} else {\n  if (retries <= 3) {\n      retries = retries+1;\n     global.set(\"open_weather_retries\", retries)\n    node.warn(`Openweather API ERROR, retry in ${retries}min`);\n    \n    setTimeout(() => {\n      node.send([null, null, { payload: \"retry\" }]);\n    }, 60000 * retries);\n  } else {\n    node.warn(`Openweather API FAILED, triggering outputs`);\n    node.send([{ payload: \"normal\" }, null, null]);\n    global.set(\"open_weather_retries\", 0);\n  }\n}",
         "outputs": 3,
         "noerr": 0,
         "x": 990,
@@ -388,7 +356,7 @@
         "id": "8782aeec.566388",
         "type": "switch",
         "z": "20e19740.7ac5c",
-        "name": "",
+        "name": "trigger",
         "property": "payload",
         "propertyType": "msg",
         "rules": [
@@ -494,8 +462,8 @@
         "type": "function",
         "z": "20e19740.7ac5c",
         "name": "Timmer",
-        "func": "/*********************************************************************\n  //    User Configurations.\n**********************************************************************/\n\n//\n//  this is an array channel times\n//\nvar times = [1, 2, 3];\n\n/*********************************************************************\n  //    End User Configurations.\n**********************************************************************/\n\nvar output = [];\n\ntimes.forEach((times, i) => {\n  if (msg.payload == \"off\") {\n    // Turn off irrigation when it rains over 10 mm.\n    output[i] = 0;\n  } else if (msg.payload == \"reduced\") {\n    // Decrease irrigation by 50% when it rains over 5 mm\n    output[i] = times / 2;\n  } else if (msg.payload == \"delay\") {\n    // Delay irrigation if wind speeds over 50 km/hr are forecast.\n    output[i] = -1;\n\n    setTimeout(() => {\n      node.send([null, { payload: \"retry\" }]);\n    }, 60000 * 60);\n  } else if (msg.payload == \"increase\") {\n    // Increase irrigation by 20% if forecast temperature is over 35 degrees.\n    output[i] = times + times * 0.2;\n  } else {\n    output[i] = times;\n  }\n\n  triggerOutput(i, output[i]);\n});\n\nfunction triggerOutput(channel, period) {\n  if (period > 0) {\n    node.send([\n      { topic: `waterbird/set/ch${channel + 1}`, payload: \"on\" },\n      null,\n    ]);\n    setTimeout(() => {\n      node.send([\n        { topic: `waterbird/set/ch${channel + 1}`, payload: \"off\" },\n        null,\n      ]);\n    }, period * 60000);\n  } else {\n    node.send([\n      { topic: `waterbird/set/ch${channel + 1}`, payload: \"off\" },\n      null,\n    ]);\n  }\n}\n\nlet str = \"\";\nif (output[0] === 0) {\n  str = \"Off\";\n} else if (output[0] === -1) {\n  str = \"Delayed\";\n} else {\n  output.forEach((x, i) => {\n    str = str + `${x}m, `;\n  });\n}\nnode.status({\n  fill: \"blue\",\n  shape: \"ring\",\n  text: str,\n});\nsetTimeout(() => {\n  node.status({\n    fill: \"grey\",\n    shape: \"dot\",\n    text: \"\",\n  });\n}, 10000);\n\n",
-        "outputs": 2,
+        "func": "/*********************************************************************\n  //    User Configurations.\n**********************************************************************/\n\n//\n//  this is an array channel times\n//\nvar times = [5];\n\n/*********************************************************************\n  //    End User Configurations.\n**********************************************************************/\n\nlet output = [];\nlet mode;\n\ntimes.forEach((times, i) => {\n  if (msg.payload == \"off\") {\n    // Turn off irrigation when it rains over 10 mm.\n    output[i] = 0;\n    mode = \"Skip: rains over 10 mm\";\n  } else if (msg.payload == \"reduced\") {\n    // Decrease irrigation by 50% when it rains over 5 mm\n    output[i] = times / 2;\n     mode = \"Reduced: rains over 5 mm\";\n  } else if (msg.payload == \"delay\") {\n    // Delay irrigation if wind speeds over 50 km/hr are forecast.\n    output[i] = -1;\n    mode = \"Delayed: wind speeds over 50 km/hr, will try again in an hour\";\n    setTimeout(() => {\n      node.send([null, { payload: \"retry\" }, null]);\n    }, 60000 * 60);\n  } else if (msg.payload == \"increase\") {\n    // Increase irrigation by 20% if forecast temperature is over 35 degrees.\n    output[i] = times + times * 0.2;\n     mode = \"Increased: over 35 degrees\";\n  } else {\n    output[i] = times;\n    mode = \"Normal watering.\";\n  }\n\n  triggerOutput(i, output[i]);\n  node.send([  null, null, { payload: `${mode}\\nToday: ${msg.weather.max_temp}℃, ${msg.weather.rain}mm,  ${msg.weather.wind}km/h` }]);\n});\n\nfunction triggerOutput(channel, period) {\n  if (period > 0) {\n    node.send([\n      { topic: `waterbird/set/ch${channel + 1}`, payload: \"on\" },\n      null, null\n    ]);\n    setTimeout(() => {\n      node.send([\n        { topic: `waterbird/set/ch${channel + 1}`, payload: \"off\" },\n        null, null\n      ]);\n    }, period * 60000);\n  } else {\n    node.send([\n      { topic: `waterbird/set/ch${channel + 1}`, payload: \"off\" },\n      null, null\n    ]);\n  }\n}\n\nlet str = \"\";\nif (output[0] === 0) {\n  str = \"Off\";\n} else if (output[0] === -1) {\n  str = \"Delayed\";\n} else {\n  output.forEach((x, i) => {\n    str = str + `${x}m, `;\n  });\n}\nnode.status({\n  fill: \"blue\",\n  shape: \"ring\",\n  text: str,\n});\nsetTimeout(() => {\n  node.status({\n    fill: \"grey\",\n    shape: \"dot\",\n    text: \"\",\n  });\n}, 10000);\n\n\n\n",
+        "outputs": 3,
         "noerr": 0,
         "x": 1160,
         "y": 180,
@@ -506,6 +474,9 @@
             ],
             [
                 "66a96e95.f82dc8"
+            ],
+            [
+                "c589398c.c301e"
             ]
         ]
     },
@@ -513,7 +484,7 @@
         "id": "8243749e.681fd",
         "type": "comment",
         "z": "20e19740.7ac5c",
-        "name": "v0.1.1",
+        "name": "v0.1.2",
         "info": "",
         "x": 90,
         "y": 60,
@@ -531,6 +502,71 @@
         "complete": "false",
         "x": 1370,
         "y": 40,
+        "wires": []
+    },
+    {
+        "id": "ef12749.8263d08",
+        "type": "inject",
+        "z": "20e19740.7ac5c",
+        "name": "reset ping",
+        "topic": "",
+        "payload": "reset",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "x": 410,
+        "y": 380,
+        "wires": [
+            [
+                "cfbf9c07.612f78"
+            ]
+        ]
+    },
+    {
+        "id": "cfbf9c07.612f78",
+        "type": "function",
+        "z": "20e19740.7ac5c",
+        "name": "Waterbird 🦩",
+        "func": "var retries = global.get(\"waterbird_ping_retries\") || 0;\nvar interval = global.get(\"waterbird_ping_interval\") || null;\n\nif (retries === 0 || msg.payload === \"reset\") {\n  retries = 1;\n  clearInterval(interval);\n  node.status({\n    fill: \"blue\",\n    shape: \"dot\",\n    text: `RESET`,\n  });\n\n  interval = setInterval(() => {\n    var retries = global.get(\"waterbird_ping_retries\") || 0;\n    if (retries < 3) {\n      retries = retries + 1;\n    } else {\n      node.status({\n        fill: \"red\",\n        shape: \"dot\",\n        text: `OFFLINE`,\n      });\n    }\n    global.set(\"waterbird_ping_retries\", retries);\n    node.send({\n      topic: `waterbird/pingreq`,\n      payload: \"\",\n    });\n  }, 30000);\n} else if (msg.topic === \"waterbird/pingresp\" && msg.payload) {\n  retries = 1;\n  node.status({\n    fill: \"green\",\n    shape: \"dot\",\n    text: `Uptime: ${msToTime(msg.payload)}`,\n  });\n}\n\nfunction msToTime(s) {\n  function pad(n, z) {\n    z = z || 2;\n    return (\"00\" + n).slice(-z);\n  }\n\n  var ms = s % 1000;\n  s = (s - ms) / 1000;\n  var secs = s % 60;\n  s = (s - secs) / 60;\n  var mins = s % 60;\n  s = (s - mins) / 60;\n  var hrs = s % 24;\n  var days = (s - hrs) / 24;\n\n  return `${days}d, ${pad(hrs)}h, ${pad(mins)}m, ${pad(secs)}s.`;\n}\n\nglobal.set(\"waterbird_ping_retries\", retries);\nglobal.set(\"waterbird_ping_interval\", interval);\n\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 620,
+        "y": 320,
+        "wires": [
+            [
+                "d1516414.e4007"
+            ]
+        ],
+        "icon": "font-awesome/fa-heart"
+    },
+    {
+        "id": "c9b80ac7.e29f18",
+        "type": "mqtt in",
+        "z": "20e19740.7ac5c",
+        "name": "",
+        "topic": "waterbird/pingresp",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "59504833.dbd63",
+        "x": 390,
+        "y": 320,
+        "wires": [
+            [
+                "cfbf9c07.612f78"
+            ]
+        ]
+    },
+    {
+        "id": "c589398c.c301e",
+        "type": "pushover api",
+        "z": "20e19740.7ac5c",
+        "keys": "ea77fb0e.69f318",
+        "title": "Waterbird 🦩",
+        "name": "",
+        "x": 1360,
+        "y": 240,
         "wires": []
     },
     {
@@ -557,5 +593,11 @@
         "willQos": "0",
         "willRetain": "false",
         "willPayload": ""
+    },
+    {
+        "id": "ea77fb0e.69f318",
+        "type": "pushover-keys",
+        "z": "",
+        "name": "node-red"
     }
 ]
